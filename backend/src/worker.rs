@@ -134,9 +134,15 @@ async fn perform_check(
 
             warn!(service_id = %service.id, error = %error_msg, "Health check failed");
 
-            if let Err(e) =
-                db::insert_check_result(pool, &service.id, false, None, elapsed_ms, Some(&error_msg))
-                    .await
+            if let Err(e) = db::insert_check_result(
+                pool,
+                &service.id,
+                false,
+                None,
+                elapsed_ms,
+                Some(&error_msg),
+            )
+            .await
             {
                 error!(service_id = %service.id, error = %e, "Failed to insert check result");
             }

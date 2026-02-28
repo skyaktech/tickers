@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use sqlx::Row;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use std::str::FromStr;
 
 pub async fn init_pool(database_url: &str) -> Result<SqlitePool, sqlx::Error> {
@@ -21,7 +21,6 @@ pub async fn init_pool(database_url: &str) -> Result<SqlitePool, sqlx::Error> {
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct CheckResult {
-    pub id: i64,
     pub service_id: String,
     pub is_up: bool,
     pub status_code: Option<i32>,
@@ -76,7 +75,7 @@ pub async fn get_latest_per_service(
     let ids_json = serde_json::to_string(service_ids).unwrap();
     sqlx::query_as::<_, CheckResult>(
         r#"
-        SELECT cr.*
+        SELECT cr.service_id, cr.is_up, cr.status_code, cr.response_time_ms, cr.error_message, cr.checked_at
         FROM check_results cr
         INNER JOIN (
             SELECT service_id, MAX(checked_at) as max_checked_at

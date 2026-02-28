@@ -16,13 +16,14 @@ pub struct AppState {
     pub config: Arc<Config>,
 }
 
-pub async fn get_status(
-    State(state): State<AppState>,
-) -> Result<Json<StatusResponse>, AppError> {
+pub async fn get_status(State(state): State<AppState>) -> Result<Json<StatusResponse>, AppError> {
     let service_ids: Vec<String> = state.config.services.iter().map(|s| s.id.clone()).collect();
     let latest = db::get_latest_per_service(&state.pool, &service_ids).await?;
 
-    let latest_map: HashMap<_, _> = latest.into_iter().map(|cr| (cr.service_id.clone(), cr)).collect();
+    let latest_map: HashMap<_, _> = latest
+        .into_iter()
+        .map(|cr| (cr.service_id.clone(), cr))
+        .collect();
 
     let mut services = Vec::new();
     for svc in &state.config.services {
@@ -91,10 +92,7 @@ fn compute_overall_status(services: &[ServiceStatus]) -> OverallStatus {
     }
 }
 
-fn build_history_response(
-    config: &Config,
-    buckets: Vec<db::AggregatedBucket>,
-) -> HistoryResponse {
+fn build_history_response(config: &Config, buckets: Vec<db::AggregatedBucket>) -> HistoryResponse {
     let mut grouped: HashMap<String, Vec<HistoryBucket>> = HashMap::new();
 
     for bucket in buckets {

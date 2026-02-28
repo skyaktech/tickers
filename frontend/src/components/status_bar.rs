@@ -27,7 +27,10 @@ fn tick_symbol(uptime: f64) -> &'static str {
 fn format_tooltip(bucket: &HistoryBucket) -> String {
     format!(
         "{}: {:.1}% uptime, {:.0}ms avg, {} checks",
-        bucket.timestamp, bucket.uptime_percentage, bucket.avg_response_time_ms, bucket.total_checks
+        bucket.timestamp,
+        bucket.uptime_percentage,
+        bucket.avg_response_time_ms,
+        bucket.total_checks
     )
 }
 

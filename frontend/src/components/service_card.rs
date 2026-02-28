@@ -23,12 +23,9 @@ pub fn ServiceCard(
 
     let response_time = format!("{}ms", service.response_time_ms);
 
-    let error_view = service
-        .error_message
-        .as_ref()
-        .map(|msg| {
-            view! { <span class="error-message">{msg.clone()}</span> }
-        });
+    let error_view = service.error_message.as_ref().map(|msg| {
+        view! { <span class="error-message">{msg.clone()}</span> }
+    });
 
     view! {
         <div class="service-card">

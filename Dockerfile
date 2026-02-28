@@ -33,9 +33,10 @@ WORKDIR /app
 COPY --from=backend-builder /app/target/release/tickers /app/tickers
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
-RUN mkdir -p /app/data
+RUN useradd -m -u 1001 tickers && mkdir -p /app/data && chown -R tickers:tickers /app
 COPY tickers.toml /app/tickers.toml
 
+USER tickers
 EXPOSE 8080
 ENV TICKERS_CONFIG=/app/tickers.toml
 CMD ["/app/tickers"]
