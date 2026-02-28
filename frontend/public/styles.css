@@ -1,0 +1,263 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f9fafb;
+    color: #1f2937;
+    line-height: 1.6;
+}
+
+.status-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Header */
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.025em;
+}
+
+.header-subtitle {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+/* Overall Status Banner */
+
+.banner {
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.banner-operational {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.banner-partial {
+    background-color: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #fde68a;
+}
+
+.banner-major {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.banner-icon {
+    font-size: 1.4rem;
+}
+
+/* Error Banner */
+
+.error-banner {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+/* Service Card */
+
+.service-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.service-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.service-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.service-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.response-time {
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-variant-numeric: tabular-nums;
+}
+
+.error-message {
+    font-size: 0.8rem;
+    color: #dc2626;
+}
+
+/* Status Indicator */
+
+.status-indicator {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.status-indicator.up {
+    color: #22c55e;
+}
+
+.status-indicator.down {
+    color: #ef4444;
+}
+
+/* Status Bar (tick marks) */
+
+.service-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.bar-section {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.bar-label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    min-width: 4.5rem;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.status-bar {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.tick {
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: default;
+    line-height: 1;
+    transition: transform 0.1s ease;
+}
+
+.tick:hover {
+    transform: scale(1.3);
+}
+
+.tick.green {
+    color: #22c55e;
+}
+
+.tick.yellow {
+    color: #eab308;
+}
+
+.tick.orange {
+    color: #f97316;
+}
+
+.tick.red {
+    color: #ef4444;
+}
+
+.tick.purple {
+    color: #a855f7;
+}
+
+.tick.gray {
+    color: #d1d5db;
+}
+
+/* Footer */
+
+.footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    color: #9ca3af;
+    font-size: 0.85rem;
+}
+
+.footer-link {
+    color: #6b7280;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.footer-link:hover {
+    color: #374151;
+    text-decoration: underline;
+}
+
+/* Responsive */
+
+@media (max-width: 640px) {
+    .status-page {
+        padding: 1rem 0.75rem;
+    }
+
+    .service-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .service-meta {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .tick {
+        font-size: 0.7rem;
+    }
+
+    .bar-label {
+        min-width: 3.5rem;
+        font-size: 0.7rem;
+    }
+}
