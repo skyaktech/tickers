@@ -7,3 +7,6 @@ frontend/dist/
 # Planning files — not part of the codebase
 INITIAL-PLAN.md
 PLAN.md
+
+# Claude Code
+.claude/
