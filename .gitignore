@@ -1,0 +1,9 @@
+/target
+data/*.db
+data/*.db-wal
+data/*.db-shm
+frontend/dist/
+
+# Planning files — not part of the codebase
+INITIAL-PLAN.md
+PLAN.md

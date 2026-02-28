@@ -1,0 +1,16 @@
+[server]
+port = 8080
+static_dir = "./frontend/dist"
+
+[defaults]
+check_interval = 60  # seconds
+timeout = 10         # seconds
+
+[database]
+url = "sqlite://data/tickers.db"
+
+[[services]]
+id = "example"
+name = "Example Service"
+url = "https://httpbin.org/status/200"
+expected_status = 200
