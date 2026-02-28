@@ -1,0 +1,12 @@
+services:
+  tickers:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - tickers-data:/app/data
+      - ./tickers.toml:/app/tickers.toml:ro
+    restart: unless-stopped
+
+volumes:
+  tickers-data:
