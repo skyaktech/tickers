@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use leptos::prelude::*;
 use leptos::web_sys::MouseEvent;
 
@@ -29,9 +29,10 @@ fn tick_symbol(uptime: f64) -> &'static str {
 fn format_timestamp(ts: &str, is_daily: bool) -> String {
     if let Ok(dt) = ts.parse::<DateTime<Utc>>() {
         if is_daily {
-            dt.format("%b %d").to_string()
+            format!("{} UTC", dt.format("%b %d"))
         } else {
-            dt.format("%b %d, %H:%M").to_string()
+            let end = dt + TimeDelta::hours(1);
+            format!("{} \u{2013} {} UTC", dt.format("%b %d, %H:%M"), end.format("%H:%M"))
         }
     } else {
         ts.to_string()
