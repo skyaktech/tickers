@@ -27,7 +27,7 @@ pub fn App() -> impl IntoView {
     let (daily_data, set_daily_data) = signal(None::<api::HistoryResponse>);
     let (error, set_error) = signal(None::<String>);
 
-    // Initial fetch
+    // Initial fetch — all three fire concurrently
     spawn_local(async move {
         match api::fetch_status().await {
             Ok(data) => {
@@ -36,9 +36,13 @@ pub fn App() -> impl IntoView {
             }
             Err(e) => set_error.set(Some(format!("Failed to fetch status: {e}"))),
         }
+    });
+    spawn_local(async move {
         if let Ok(data) = api::fetch_hourly_history().await {
             set_hourly_data.set(Some(data));
         }
+    });
+    spawn_local(async move {
         if let Ok(data) = api::fetch_daily_history().await {
             set_daily_data.set(Some(data));
         }
