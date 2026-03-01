@@ -23,6 +23,24 @@ pub fn ServiceCard(
 
     let response_time = format!("{}ms", service.response_time_ms);
 
+    let uptime_view = daily_history.as_ref().and_then(|d| {
+        let total: i64 = d.buckets.iter().map(|b| b.total_checks).sum();
+        let successful: i64 = d.buckets.iter().map(|b| b.successful_checks).sum();
+        if total > 0 {
+            let pct = (successful as f64 / total as f64) * 100.0;
+            let class = if pct >= 99.0 {
+                "uptime-pct green"
+            } else if pct >= 95.0 {
+                "uptime-pct yellow"
+            } else {
+                "uptime-pct red"
+            };
+            Some(view! { <span class=class>{format!("{:.2}% uptime", pct)}</span> })
+        } else {
+            None
+        }
+    });
+
     let error_view = service.error_message.as_ref().map(|msg| {
         view! { <span class="error-message">{msg.clone()}</span> }
     });
@@ -36,6 +54,7 @@ pub fn ServiceCard(
                 </div>
                 <div class="service-meta">
                     {error_view}
+                    {uptime_view}
                     <span class="response-time">{response_time}</span>
                 </div>
             </div>

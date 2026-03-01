@@ -132,6 +132,24 @@ body {
     color: #dc2626;
 }
 
+.uptime-pct {
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.uptime-pct.green {
+    color: #22c55e;
+}
+
+.uptime-pct.yellow {
+    color: #eab308;
+}
+
+.uptime-pct.red {
+    color: #ef4444;
+}
+
 /* Status Indicator */
 
 .status-indicator {
