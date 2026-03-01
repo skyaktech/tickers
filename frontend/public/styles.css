@@ -171,16 +171,22 @@ body {
 
 .status-bar {
     display: flex;
-    gap: 2px;
+    gap: 0;
     flex: 1;
     justify-content: flex-end;
+    flex-wrap: nowrap;
 }
 
 .tick {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: default;
     line-height: 1;
+    padding: 0 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
     transition: transform 0.1s ease;
 }
 
@@ -253,7 +259,8 @@ body {
     }
 
     .tick {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
+        padding: 0 1px;
     }
 
     .bar-label {
