@@ -233,7 +233,7 @@ tickers/
 │       └── api/       # HTTP handlers and response models
 ├── frontend/          # Leptos CSR (WASM) single-page application
 │   └── src/
-│       ├── lib.rs     # App root, data fetching, 30s polling
+│       ├── lib.rs     # App root, data fetching, tiered polling
 │       ├── api.rs     # HTTP client and response types
 │       └── components/
 ├── migrations/        # SQLx SQL migration files

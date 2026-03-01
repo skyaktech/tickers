@@ -16,7 +16,7 @@ pub struct Worker {
 impl Worker {
     pub fn new(config: Config, pool: SqlitePool, cancel_token: CancellationToken) -> Self {
         let client = Client::builder()
-            .user_agent("tickers/0.1.1")
+            .user_agent("tickers/0.2.0")
             .redirect(reqwest::redirect::Policy::limited(5))
             .build()
             .expect("Failed to build HTTP client");
