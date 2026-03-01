@@ -1,5 +1,7 @@
 use axum::Json;
 use axum::extract::State;
+use axum::http::header;
+use axum::response::IntoResponse;
 use chrono::Utc;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
@@ -16,7 +18,7 @@ pub struct AppState {
     pub config: Arc<Config>,
 }
 
-pub async fn get_status(State(state): State<AppState>) -> Result<Json<StatusResponse>, AppError> {
+pub async fn get_status(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let service_ids: Vec<String> = state.config.services.iter().map(|s| s.id.clone()).collect();
     let latest = db::get_latest_per_service(&state.pool, &service_ids).await?;
 
@@ -53,29 +55,32 @@ pub async fn get_status(State(state): State<AppState>) -> Result<Json<StatusResp
     }
 
     let overall_status = compute_overall_status(&services);
-    Ok(Json(StatusResponse {
-        services,
-        overall_status,
-        generated_at: Utc::now(),
-    }))
+    Ok((
+        [(header::CACHE_CONTROL, "max-age=10")],
+        Json(StatusResponse {
+            services,
+            overall_status,
+            generated_at: Utc::now(),
+        }),
+    ))
 }
 
 pub async fn get_hourly_history(
     State(state): State<AppState>,
-) -> Result<Json<HistoryResponse>, AppError> {
+) -> Result<impl IntoResponse, AppError> {
     let service_ids: Vec<String> = state.config.services.iter().map(|s| s.id.clone()).collect();
     let buckets = db::get_hourly_aggregation(&state.pool, &service_ids).await?;
     let response = build_history_response(&state.config, buckets);
-    Ok(Json(response))
+    Ok(([(header::CACHE_CONTROL, "max-age=300")], Json(response)))
 }
 
 pub async fn get_daily_history(
     State(state): State<AppState>,
-) -> Result<Json<HistoryResponse>, AppError> {
+) -> Result<impl IntoResponse, AppError> {
     let service_ids: Vec<String> = state.config.services.iter().map(|s| s.id.clone()).collect();
     let buckets = db::get_daily_aggregation(&state.pool, &service_ids).await?;
     let response = build_history_response(&state.config, buckets);
-    Ok(Json(response))
+    Ok(([(header::CACHE_CONTROL, "max-age=1800")], Json(response)))
 }
 
 fn compute_overall_status(services: &[ServiceStatus]) -> OverallStatus {

@@ -9,6 +9,10 @@ use components::header::Header;
 use components::overall_status::OverallStatusBanner;
 use components::service_card::ServiceCard;
 
+const STATUS_POLL_MS: u32 = 30_000; // 30 seconds
+const HOURLY_POLL_MS: u32 = 300_000; // 5 minutes
+const DAILY_POLL_MS: u32 = 1_800_000; // 30 minutes
+
 #[wasm_bindgen::prelude::wasm_bindgen(start)]
 pub fn main() {
     _ = console_log::init_with_level(log::Level::Debug);
@@ -23,16 +27,58 @@ pub fn App() -> impl IntoView {
     let (daily_data, set_daily_data) = signal(None::<api::HistoryResponse>);
     let (error, set_error) = signal(None::<String>);
 
-    // Initial fetch
+    // Initial fetch — all three fire concurrently
     spawn_local(async move {
-        fetch_all_data(set_status_data, set_hourly_data, set_daily_data, set_error).await;
+        match api::fetch_status().await {
+            Ok(data) => {
+                set_status_data.set(Some(data));
+                set_error.set(None);
+            }
+            Err(e) => set_error.set(Some(format!("Failed to fetch status: {e}"))),
+        }
+    });
+    spawn_local(async move {
+        if let Ok(data) = api::fetch_hourly_history().await {
+            set_hourly_data.set(Some(data));
+        }
+    });
+    spawn_local(async move {
+        if let Ok(data) = api::fetch_daily_history().await {
+            set_daily_data.set(Some(data));
+        }
     });
 
-    // 30-second polling loop
+    // Poll status every 30 seconds
     spawn_local(async move {
         loop {
-            gloo_timers::future::TimeoutFuture::new(30_000).await;
-            fetch_all_data(set_status_data, set_hourly_data, set_daily_data, set_error).await;
+            gloo_timers::future::TimeoutFuture::new(STATUS_POLL_MS).await;
+            match api::fetch_status().await {
+                Ok(data) => {
+                    set_status_data.set(Some(data));
+                    set_error.set(None);
+                }
+                Err(e) => set_error.set(Some(format!("Failed to fetch status: {e}"))),
+            }
+        }
+    });
+
+    // Poll hourly history every 5 minutes
+    spawn_local(async move {
+        loop {
+            gloo_timers::future::TimeoutFuture::new(HOURLY_POLL_MS).await;
+            if let Ok(data) = api::fetch_hourly_history().await {
+                set_hourly_data.set(Some(data));
+            }
+        }
+    });
+
+    // Poll daily history every 30 minutes
+    spawn_local(async move {
+        loop {
+            gloo_timers::future::TimeoutFuture::new(DAILY_POLL_MS).await;
+            if let Ok(data) = api::fetch_daily_history().await {
+                set_daily_data.set(Some(data));
+            }
         }
     });
 
@@ -62,26 +108,5 @@ pub fn App() -> impl IntoView {
             })}
             <Footer />
         </div>
-    }
-}
-
-async fn fetch_all_data(
-    set_status: WriteSignal<Option<api::StatusResponse>>,
-    set_hourly: WriteSignal<Option<api::HistoryResponse>>,
-    set_daily: WriteSignal<Option<api::HistoryResponse>>,
-    set_error: WriteSignal<Option<String>>,
-) {
-    match api::fetch_status().await {
-        Ok(data) => {
-            set_status.set(Some(data));
-            set_error.set(None);
-        }
-        Err(e) => set_error.set(Some(format!("Failed to fetch status: {e}"))),
-    }
-    if let Ok(data) = api::fetch_hourly_history().await {
-        set_hourly.set(Some(data));
-    }
-    if let Ok(data) = api::fetch_daily_history().await {
-        set_daily.set(Some(data));
     }
 }
