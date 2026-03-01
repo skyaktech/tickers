@@ -2874,6 +2874,7 @@ dependencies = [
  "console_log",
  "gloo-net",
  "gloo-timers",
+ "js-sys",
  "leptos",
  "log",
  "serde",

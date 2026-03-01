@@ -132,6 +132,24 @@ body {
     color: #dc2626;
 }
 
+.uptime-pct {
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.uptime-pct.green {
+    color: #22c55e;
+}
+
+.uptime-pct.yellow {
+    color: #eab308;
+}
+
+.uptime-pct.red {
+    color: #ef4444;
+}
+
 /* Status Indicator */
 
 .status-indicator {
@@ -171,16 +189,22 @@ body {
 
 .status-bar {
     display: flex;
-    gap: 2px;
+    gap: 0;
     flex: 1;
     justify-content: flex-end;
+    flex-wrap: nowrap;
 }
 
 .tick {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: default;
     line-height: 1;
+    padding: 0 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
     transition: transform 0.1s ease;
 }
 
@@ -209,6 +233,38 @@ body {
 }
 
 .tick.gray {
+    color: #d1d5db;
+}
+
+/* Custom Tooltip */
+
+.custom-tooltip {
+    position: fixed;
+    background: #1f2937;
+    color: #f9fafb;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    border-radius: 6px;
+    padding: 8px 12px;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateX(-50%);
+}
+
+.tooltip-ts {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.tooltip-local {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    margin-bottom: 4px;
+}
+
+.tooltip-row {
     color: #d1d5db;
 }
 
@@ -253,7 +309,8 @@ body {
     }
 
     .tick {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
+        padding: 0 1px;
     }
 
     .bar-label {
