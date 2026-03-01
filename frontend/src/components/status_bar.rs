@@ -1,4 +1,5 @@
-use chrono::{DateTime, TimeDelta, Utc};
+use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
+use js_sys::Date;
 use leptos::prelude::*;
 use leptos::web_sys::MouseEvent;
 
@@ -34,9 +35,26 @@ fn format_timestamp(ts: &str, is_daily: bool) -> String {
             let end = dt + TimeDelta::hours(1);
             format!("{} \u{2013} {} UTC", dt.format("%b %d, %H:%M"), end.format("%H:%M"))
         }
+    } else if is_daily {
+        if let Ok(nd) = NaiveDate::parse_from_str(ts, "%Y-%m-%d") {
+            format!("{} UTC", nd.format("%b %d"))
+        } else {
+            ts.to_string()
+        }
     } else {
         ts.to_string()
     }
+}
+
+fn format_local_timestamp(ts: &str) -> Option<String> {
+    let dt = ts.parse::<DateTime<Utc>>().ok()?;
+    let millis = dt.timestamp_millis() as f64;
+    let js_start = Date::new(&millis.into());
+    let end_millis = millis + 3_600_000.0;
+    let js_end = Date::new(&end_millis.into());
+    let h_start = format!("{:02}:{:02}", js_start.get_hours(), js_start.get_minutes());
+    let h_end = format!("{:02}:{:02}", js_end.get_hours(), js_end.get_minutes());
+    Some(format!("{} \u{2013} {} local", h_start, h_end))
 }
 
 #[derive(Clone)]
@@ -108,17 +126,21 @@ pub fn StatusBar(
             {marks}
             {move || tooltip.get().map(|data| {
                 let ts = format_timestamp(&data.bucket.timestamp, is_daily);
+                let local_ts = if is_daily { None } else { format_local_timestamp(&data.bucket.timestamp) };
+                let has_local = local_ts.is_some();
                 let uptime = format!("{:.1}% uptime", data.bucket.uptime_percentage);
                 let checks = format!("{} checks", data.bucket.total_checks);
                 let resp = format!("{:.0}ms avg", data.bucket.avg_response_time_ms);
+                let offset = if has_local { 85.0 } else { 70.0 };
                 let style = format!(
                     "left: {}px; top: {}px;",
                     data.x,
-                    data.y - 70.0,
+                    data.y - offset,
                 );
                 view! {
                     <div class="custom-tooltip" style=style>
                         <div class="tooltip-ts">{ts}</div>
+                        {local_ts.map(|lt| view! { <div class="tooltip-local">{lt}</div> })}
                         <div class="tooltip-row">{uptime}" · "{checks}</div>
                         <div class="tooltip-row">{resp}</div>
                     </div>

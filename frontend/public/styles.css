@@ -258,6 +258,12 @@ body {
     margin-bottom: 2px;
 }
 
+.tooltip-local {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    margin-bottom: 4px;
+}
+
 .tooltip-row {
     color: #d1d5db;
 }
