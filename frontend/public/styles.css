@@ -218,6 +218,32 @@ body {
     color: #d1d5db;
 }
 
+/* Custom Tooltip */
+
+.custom-tooltip {
+    position: fixed;
+    background: #1f2937;
+    color: #f9fafb;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    border-radius: 6px;
+    padding: 8px 12px;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateX(-50%);
+}
+
+.tooltip-ts {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.tooltip-row {
+    color: #d1d5db;
+}
+
 /* Footer */
 
 .footer {

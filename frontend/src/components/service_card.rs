@@ -46,6 +46,7 @@ pub fn ServiceCard(
                     <StatusBar
                         buckets=hourly_history.map(|h| h.buckets).unwrap_or_default()
                         expected_count=24
+                        label="24 hours"
                     />
                 </div>
                 <div class="bar-section">
@@ -53,6 +54,7 @@ pub fn ServiceCard(
                     <StatusBar
                         buckets=daily_history.map(|d| d.buckets).unwrap_or_default()
                         expected_count=30
+                        label="30 days"
                     />
                 </div>
             </div>
