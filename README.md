@@ -4,7 +4,7 @@ A lightweight, self-hosted status page that monitors HTTP endpoints and displays
 
 **[ticke.rs](https://ticke.rs)**
 
-<!-- ![Tickers Screenshot](docs/screenshot.png) -->
+![Tickers Screenshot](http://ticke.rs/Tickers-screenshot.webp)
 
 ## Features
 
