@@ -1,3 +1,4 @@
+use regex::Regex;
 use serde::Deserialize;
 use std::path::Path;
 
@@ -44,6 +45,7 @@ pub struct ServiceConfig {
     pub expected_status: u16,
     pub check_interval: Option<u64>,
     pub timeout: Option<u64>,
+    pub expected_body: Option<String>,
 }
 
 fn default_port() -> u16 {
@@ -96,6 +98,11 @@ impl Default for DatabaseConfig {
     }
 }
 
+pub enum BodyExpectation {
+    Contains(String),
+    Regex(Regex),
+}
+
 impl ServiceConfig {
     pub fn effective_check_interval(&self, defaults: &DefaultsConfig) -> u64 {
         self.check_interval.unwrap_or(defaults.check_interval)
@@ -103,6 +110,28 @@ impl ServiceConfig {
 
     pub fn effective_timeout(&self, defaults: &DefaultsConfig) -> u64 {
         self.timeout.unwrap_or(defaults.timeout)
+    }
+
+    pub fn parse_expected_body(&self) -> Result<Option<BodyExpectation>, regex::Error> {
+        let Some(ref value) = self.expected_body else {
+            return Ok(None);
+        };
+
+        if value.starts_with('/') {
+            if let Some(pattern) = value.strip_suffix("/i") {
+                let pattern = &pattern[1..];
+                let regex = Regex::new(&format!("(?i){pattern}"))?;
+                Ok(Some(BodyExpectation::Regex(regex)))
+            } else if let Some(pattern) = value.strip_suffix('/') {
+                let pattern = &pattern[1..];
+                let regex = Regex::new(pattern)?;
+                Ok(Some(BodyExpectation::Regex(regex)))
+            } else {
+                Ok(Some(BodyExpectation::Contains(value.clone())))
+            }
+        } else {
+            Ok(Some(BodyExpectation::Contains(value.clone())))
+        }
     }
 }
 
@@ -137,6 +166,9 @@ impl Config {
             if svc.url.parse::<url::Url>().is_err() {
                 return Err(ConfigError::InvalidUrl(svc.id.clone(), svc.url.clone()));
             }
+            if let Err(e) = svc.parse_expected_body() {
+                return Err(ConfigError::InvalidRegex(svc.id.clone(), e.to_string()));
+            }
         }
         Ok(())
     }
@@ -152,4 +184,6 @@ pub enum ConfigError {
     DuplicateServiceId(String),
     #[error("Invalid URL for service '{0}': {1}")]
     InvalidUrl(String, String),
+    #[error("Invalid regex for service '{0}': {1}")]
+    InvalidRegex(String, String),
 }
