@@ -4,11 +4,11 @@ A lightweight, self-hosted status page that monitors HTTP endpoints and displays
 
 **[ticke.rs](https://ticke.rs)**
 
-<!-- ![Tickers Screenshot](docs/screenshot.png) -->
+![Tickers Screenshot](http://ticke.rs/Tickers-screenshot.webp)
 
 ## Features
 
-- **HTTP endpoint monitoring** with configurable check intervals and timeouts
+- **HTTP endpoint monitoring** with configurable check intervals, timeouts, and response body validation
 - **Tick mark UI** — checkmarks (&#10003;) and crosses (&#10007;) colored by uptime percentage
 - **24-hour hourly** and **30-day daily** history rows per service
 - **Color-coded uptime**: green (100%) → yellow (≥95%) → orange (≥50%) → red (>0%) → purple (0%)
@@ -97,6 +97,8 @@ id = "my-api"                    # Unique service identifier (required)
 name = "My API"                  # Display name (required)
 url = "https://api.example.com"  # URL to monitor (required)
 expected_status = 200            # Expected HTTP status code (default: 200)
+expected_body = "ok"             # Expected substring in response body (optional)
+# expected_body = "/healthy/i"   # Or use /regex/ syntax, /i for case-insensitive
 check_interval = 30              # Override default interval for this service
 timeout = 5                      # Override default timeout for this service
 ```
@@ -111,6 +113,7 @@ Each `[[services]]` entry defines a monitored endpoint:
 | `name`           | Yes      | —                 | Display name shown in the UI       |
 | `url`            | Yes      | —                 | HTTP(S) URL to monitor             |
 | `expected_status`| No       | `200`             | Expected HTTP response status code |
+| `expected_body`  | No       | —                 | Expected response body content (substring or `/regex/`) |
 | `check_interval` | No       | from `[defaults]` | Check interval in seconds          |
 | `timeout`        | No       | from `[defaults]` | Request timeout in seconds         |
 

@@ -14,3 +14,5 @@ id = "example"
 name = "Example Service"
 url = "https://httpbin.org/status/200"
 expected_status = 200
+# expected_body = "ok"           # substring match
+# expected_body = "/healthy/i"   # case-insensitive regex match

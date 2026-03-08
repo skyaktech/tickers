@@ -1,4 +1,4 @@
-use crate::config::{Config, DefaultsConfig, ServiceConfig};
+use crate::config::{BodyExpectation, Config, DefaultsConfig, ServiceConfig};
 use crate::db;
 use reqwest::Client;
 use sqlx::SqlitePool;
@@ -99,15 +99,40 @@ async fn perform_check(
     match result {
         Ok(response) => {
             let status = response.status().as_u16() as i32;
-            let is_up = response.status().as_u16() == service.expected_status;
+            let status_ok = response.status().as_u16() == service.expected_status;
 
-            let error_message = if !is_up {
-                Some(format!(
-                    "Expected status {}, got {}",
-                    service.expected_status, status
-                ))
+            let (is_up, error_message) = if !status_ok {
+                (
+                    false,
+                    Some(format!(
+                        "Expected status {}, got {}",
+                        service.expected_status, status
+                    )),
+                )
             } else {
-                None
+                match service.parse_expected_body() {
+                    Ok(Some(expectation)) => {
+                        let body = response.text().await.unwrap_or_default();
+                        match expectation {
+                            BodyExpectation::Contains(ref s) => {
+                                if body.contains(s.as_str()) {
+                                    (true, None)
+                                } else {
+                                    (false, Some(format!("Body did not contain '{s}'")))
+                                }
+                            }
+                            BodyExpectation::Regex(ref re) => {
+                                if re.is_match(&body) {
+                                    (true, None)
+                                } else {
+                                    (false, Some(format!("Body did not match regex '{re}'")))
+                                }
+                            }
+                        }
+                    }
+                    Ok(None) => (true, None),
+                    Err(e) => (false, Some(format!("Invalid regex: {e}"))),
+                }
             };
 
             if let Err(e) = db::insert_check_result(
