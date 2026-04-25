@@ -130,6 +130,9 @@ body {
 .error-message {
     font-size: 0.8rem;
     color: #dc2626;
+    cursor: help;
+    border-bottom: 1px dotted currentColor;
+    padding-bottom: 1px;
 }
 
 .uptime-pct {
@@ -269,6 +272,23 @@ body {
 
 .tooltip-row {
     color: #d1d5db;
+}
+
+.error-tooltip {
+    position: fixed;
+    background: #1f2937;
+    color: #f9fafb;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    border-radius: 6px;
+    padding: 8px 12px;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    max-width: 320px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateX(-50%);
 }
 
 /* Footer */

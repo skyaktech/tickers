@@ -1,7 +1,50 @@
 use leptos::prelude::*;
+use leptos::web_sys::MouseEvent;
 
 use crate::api::{ServiceHistory, ServiceStatus};
 use crate::components::status_bar::StatusBar;
+
+#[derive(Clone)]
+struct ErrorTooltipData {
+    message: String,
+    x: f64,
+    y: f64,
+}
+
+fn short_error_label(raw: &str) -> String {
+    let msg = raw.trim();
+    if msg.is_empty() {
+        return "Error".into();
+    }
+    if let Some(rest) = msg.strip_prefix("Expected status ") {
+        if let Some((_, after_got)) = rest.rsplit_once("got ") {
+            let code = after_got.trim().trim_end_matches('.');
+            if code.parse::<u16>().is_ok() {
+                return format!("HTTP {code}");
+            }
+        }
+        return "HTTP error".into();
+    }
+    if msg.starts_with("Body did not contain ") || msg.starts_with("Body did not match regex ") {
+        return "Body mismatch".into();
+    }
+    if msg.starts_with("Invalid regex:") {
+        return "Config error".into();
+    }
+    if msg.starts_with("Timeout after ") {
+        return "Timeout".into();
+    }
+    if msg.starts_with("Connection failed:") {
+        return "Connection failed".into();
+    }
+    if msg.starts_with("Request failed:") {
+        return "Request failed".into();
+    }
+    if msg == "No check results yet" {
+        return "Pending".into();
+    }
+    "Error".into()
+}
 
 #[component]
 pub fn ServiceCard(
@@ -41,8 +84,40 @@ pub fn ServiceCard(
         }
     });
 
-    let error_view = service.error_message.as_ref().map(|msg| {
-        view! { <span class="error-message">{msg.clone()}</span> }
+    let (err_tip, set_err_tip) = signal(None::<ErrorTooltipData>);
+
+    let error_view = service.error_message.as_ref().and_then(|raw| {
+        let msg = raw.trim();
+        if msg.is_empty() {
+            return None;
+        }
+        let label = short_error_label(msg);
+        let full = msg.to_string();
+        Some(view! {
+            <span
+                class="error-message"
+                on:mouseenter=move |ev: MouseEvent| {
+                    set_err_tip.set(Some(ErrorTooltipData {
+                        message: full.clone(),
+                        x: ev.client_x() as f64,
+                        y: ev.client_y() as f64,
+                    }));
+                }
+                on:mousemove=move |ev: MouseEvent| {
+                    set_err_tip.update(|t| {
+                        if let Some(data) = t {
+                            data.x = ev.client_x() as f64;
+                            data.y = ev.client_y() as f64;
+                        }
+                    });
+                }
+                on:mouseleave=move |_: MouseEvent| {
+                    set_err_tip.set(None);
+                }
+            >
+                {label}
+            </span>
+        })
     });
 
     view! {
@@ -58,6 +133,13 @@ pub fn ServiceCard(
                     <span class="response-time">{response_time}</span>
                 </div>
             </div>
+
+            {move || err_tip.get().map(|data| {
+                let style = format!("left: {}px; top: {}px;", data.x, data.y - 16.0);
+                view! {
+                    <div class="error-tooltip" style=style>{data.message}</div>
+                }
+            })}
 
             <div class="service-bars">
                 <div class="bar-section">
