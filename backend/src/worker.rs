@@ -152,9 +152,9 @@ async fn perform_check(
             let error_msg = if err.is_timeout() {
                 format!("Timeout after {}ms", timeout.as_millis())
             } else if err.is_connect() {
-                format!("Connection failed: {err}")
+                describe_connect_error(&err)
             } else {
-                format!("Request failed: {err}")
+                format!("Request failed: {}", root_cause(&err))
             };
 
             warn!(service_id = %service.id, error = %error_msg, "Health check failed");
@@ -172,6 +172,74 @@ async fn perform_check(
                 error!(service_id = %service.id, error = %e, "Failed to insert check result");
             }
         }
+    }
+}
+
+/// Returns the deepest error in the source chain, formatted as a string.
+/// reqwest's top-level `Display` only says "error sending request for url (...)";
+/// the actionable cause (e.g. "Connection refused (os error 61)") lives deeper.
+fn root_cause(err: &(dyn std::error::Error + 'static)) -> String {
+    let mut current: &dyn std::error::Error = err;
+    while let Some(source) = current.source() {
+        current = source;
+    }
+    current.to_string()
+}
+
+/// Walks the source chain for an underlying `std::io::Error` and returns its
+/// `ErrorKind`, which is stable across platforms (unlike OS error numbers/text).
+fn io_error_kind(err: &(dyn std::error::Error + 'static)) -> Option<std::io::ErrorKind> {
+    let mut current: Option<&(dyn std::error::Error + 'static)> = Some(err);
+    while let Some(e) = current {
+        if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
+            return Some(io_err.kind());
+        }
+        current = e.source();
+    }
+    None
+}
+
+/// Turns a reqwest connect-phase error into a specific, human-readable message.
+/// DNS and TLS failures aren't surfaced as `io::ErrorKind`s, so they're matched on
+/// the root-cause text; the rest key off the underlying socket error kind.
+fn describe_connect_error(err: &reqwest::Error) -> String {
+    let dyn_err: &(dyn std::error::Error + 'static) = err;
+    let cause = root_cause(dyn_err);
+    let lower = cause.to_lowercase();
+
+    if lower.contains("certificate")
+        || lower.contains("tls")
+        || lower.contains("ssl")
+        || lower.contains("handshake")
+    {
+        return format!("TLS error: {cause}");
+    }
+    if lower.contains("dns")
+        || lower.contains("lookup address")
+        || lower.contains("name or service not known")
+        || lower.contains("nodename nor servname")
+        || lower.contains("no such host")
+        || lower.contains("name resolution")
+    {
+        return format!("DNS resolution failed: {cause}");
+    }
+
+    let label = match io_error_kind(dyn_err) {
+        Some(std::io::ErrorKind::ConnectionRefused) => "Connection refused",
+        Some(std::io::ErrorKind::TimedOut) => "Connection timed out",
+        Some(std::io::ErrorKind::NetworkUnreachable) => "Network unreachable",
+        Some(std::io::ErrorKind::HostUnreachable) => "Host unreachable",
+        Some(std::io::ErrorKind::ConnectionReset) => "Connection reset",
+        Some(std::io::ErrorKind::ConnectionAborted) => "Connection aborted",
+        _ => return format!("Connection failed: {cause}"),
+    };
+
+    // Keep the canonical label as the prefix (the frontend chip keys off it),
+    // appending the OS detail only when it adds something beyond the label.
+    if lower.starts_with(&label.to_lowercase()) {
+        cause
+    } else {
+        format!("{label} — {cause}")
     }
 }
 
