@@ -31,10 +31,28 @@ fn short_error_label(raw: &str) -> String {
     if msg.starts_with("Invalid regex:") {
         return "Config error".into();
     }
-    if msg.starts_with("Timeout after ") {
+    if msg.starts_with("Timeout after ") || msg.starts_with("Connection timed out") {
         return "Timeout".into();
     }
-    if msg.starts_with("Connection failed:") {
+    if msg.starts_with("Connection refused") {
+        return "Refused".into();
+    }
+    if msg.starts_with("Connection reset") {
+        return "Conn reset".into();
+    }
+    if msg.starts_with("Connection aborted") {
+        return "Aborted".into();
+    }
+    if msg.starts_with("DNS resolution failed") {
+        return "DNS error".into();
+    }
+    if msg.starts_with("Network unreachable") || msg.starts_with("Host unreachable") {
+        return "Unreachable".into();
+    }
+    if msg.starts_with("TLS error") {
+        return "TLS error".into();
+    }
+    if msg.starts_with("Connection failed") {
         return "Connection failed".into();
     }
     if msg.starts_with("Request failed:") {
