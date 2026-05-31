@@ -5,14 +5,24 @@ use crate::api::{ServiceHistory, ServiceStatus};
 use crate::components::status_bar::StatusBar;
 
 /// Best-effort copy to the system clipboard via the async Clipboard API.
-/// Works in secure contexts (https / localhost); failures are ignored.
-fn copy_to_clipboard(text: &str) {
-    if let Some(window) = web_sys::window() {
-        let promise = window.navigator().clipboard().write_text(text);
-        wasm_bindgen_futures::spawn_local(async move {
-            let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
-        });
+/// `navigator.clipboard` only exists in secure contexts (https / localhost);
+/// over plain HTTP from a non-localhost host it is `undefined`, and calling
+/// `write_text` on it would throw synchronously — so we feature-detect first.
+/// Returns whether a write was actually dispatched; a later promise rejection
+/// is ignored.
+fn copy_to_clipboard(text: &str) -> bool {
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let clipboard = window.navigator().clipboard();
+    if clipboard.is_undefined() || clipboard.is_null() {
+        return false;
     }
+    let promise = clipboard.write_text(text);
+    wasm_bindgen_futures::spawn_local(async move {
+        let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+    });
+    true
 }
 
 #[derive(Clone)]
@@ -127,7 +137,6 @@ pub fn ServiceCard(
         Some(view! {
             <span
                 class="error-message"
-                title="Click to copy"
                 on:mouseenter=move |ev: MouseEvent| {
                     set_err_tip.set(Some(ErrorTooltipData {
                         message: full_enter.clone(),
@@ -147,22 +156,24 @@ pub fn ServiceCard(
                     set_err_tip.set(None);
                 }
                 on:click=move |_: MouseEvent| {
-                    copy_to_clipboard(&full_click);
-                    // Briefly confirm in the tooltip, then restore the full message.
-                    set_err_tip.update(|t| {
-                        if let Some(data) = t {
-                            data.message = "Copied!".to_string();
-                        }
-                    });
-                    let restore = full_click.clone();
-                    wasm_bindgen_futures::spawn_local(async move {
-                        gloo_timers::future::TimeoutFuture::new(1000).await;
+                    // Only confirm if the clipboard write was actually dispatched
+                    // (no-op in insecure contexts where clipboard is unavailable).
+                    if copy_to_clipboard(&full_click) {
                         set_err_tip.update(|t| {
                             if let Some(data) = t {
-                                data.message = restore.clone();
+                                data.message = "Copied!".to_string();
                             }
                         });
-                    });
+                        let restore = full_click.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            gloo_timers::future::TimeoutFuture::new(1000).await;
+                            set_err_tip.update(|t| {
+                                if let Some(data) = t {
+                                    data.message = restore.clone();
+                                }
+                            });
+                        });
+                    }
                 }
             >
                 {label}
