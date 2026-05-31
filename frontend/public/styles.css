@@ -130,9 +130,10 @@ body {
 .error-message {
     font-size: 0.8rem;
     color: #dc2626;
-    cursor: help;
+    cursor: pointer;
     border-bottom: 1px dotted currentColor;
     padding-bottom: 1px;
+    user-select: none;
 }
 
 .uptime-pct {

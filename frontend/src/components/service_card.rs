@@ -1,8 +1,19 @@
 use leptos::prelude::*;
-use leptos::web_sys::MouseEvent;
+use web_sys::MouseEvent;
 
 use crate::api::{ServiceHistory, ServiceStatus};
 use crate::components::status_bar::StatusBar;
+
+/// Best-effort copy to the system clipboard via the async Clipboard API.
+/// Works in secure contexts (https / localhost); failures are ignored.
+fn copy_to_clipboard(text: &str) {
+    if let Some(window) = web_sys::window() {
+        let promise = window.navigator().clipboard().write_text(text);
+        wasm_bindgen_futures::spawn_local(async move {
+            let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+        });
+    }
+}
 
 #[derive(Clone)]
 struct ErrorTooltipData {
@@ -111,12 +122,15 @@ pub fn ServiceCard(
         }
         let label = short_error_label(msg);
         let full = msg.to_string();
+        let full_enter = full.clone();
+        let full_click = full.clone();
         Some(view! {
             <span
                 class="error-message"
+                title="Click to copy"
                 on:mouseenter=move |ev: MouseEvent| {
                     set_err_tip.set(Some(ErrorTooltipData {
-                        message: full.clone(),
+                        message: full_enter.clone(),
                         x: ev.client_x() as f64,
                         y: ev.client_y() as f64,
                     }));
@@ -131,6 +145,24 @@ pub fn ServiceCard(
                 }
                 on:mouseleave=move |_: MouseEvent| {
                     set_err_tip.set(None);
+                }
+                on:click=move |_: MouseEvent| {
+                    copy_to_clipboard(&full_click);
+                    // Briefly confirm in the tooltip, then restore the full message.
+                    set_err_tip.update(|t| {
+                        if let Some(data) = t {
+                            data.message = "Copied!".to_string();
+                        }
+                    });
+                    let restore = full_click.clone();
+                    wasm_bindgen_futures::spawn_local(async move {
+                        gloo_timers::future::TimeoutFuture::new(1000).await;
+                        set_err_tip.update(|t| {
+                            if let Some(data) = t {
+                                data.message = restore.clone();
+                            }
+                        });
+                    });
                 }
             >
                 {label}
