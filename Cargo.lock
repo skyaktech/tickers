@@ -2831,7 +2831,7 @@ dependencies = [
 
 [[package]]
 name = "tickers-backend"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "axum",
  "chrono",
@@ -2852,7 +2852,7 @@ dependencies = [
 
 [[package]]
 name = "tickers-frontend"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "chrono",
  "console_error_panic_hook",
