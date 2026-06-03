@@ -9,6 +9,13 @@ timeout = 10         # seconds
 [database]
 url = "sqlite://data/tickers.db"
 
+# Telegram downtime/recovery notifications (one bot per instance).
+# Omit this whole section to disable. Both bot_token and chat_ids are required.
+# [telegram]
+# bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"  # from @BotFather
+# chat_ids = ["123456789", "-1001234567890"]               # users, groups, or @channel
+# failure_threshold = 3   # consecutive failed checks before a DOWN alert (default 3)
+
 [[services]]
 id = "example"
 name = "Example Service"

@@ -1,7 +1,9 @@
 use crate::config::{BodyExpectation, Config, DefaultsConfig, ServiceConfig};
 use crate::db;
+use crate::notifier::Notifier;
 use reqwest::Client;
 use sqlx::SqlitePool;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
@@ -10,6 +12,7 @@ pub struct Worker {
     config: Config,
     pool: SqlitePool,
     client: Client,
+    notifier: Option<Arc<Notifier>>,
     cancel_token: CancellationToken,
 }
 
@@ -21,10 +24,21 @@ impl Worker {
             .build()
             .expect("Failed to build HTTP client");
 
+        // Reuse the same HTTP client for outbound Telegram calls. `None` when disabled.
+        let notifier = Notifier::from_config(&config.telegram, client.clone()).map(Arc::new);
+        if notifier.is_some() {
+            info!(
+                chats = config.telegram.chat_ids.len(),
+                failure_threshold = config.telegram.failure_threshold,
+                "Telegram notifications enabled"
+            );
+        }
+
         Self {
             config,
             pool,
             client,
+            notifier,
             cancel_token,
         }
     }
@@ -32,6 +46,7 @@ impl Worker {
     pub fn spawn_all(self) -> Vec<tokio::task::JoinHandle<()>> {
         let mut handles = Vec::new();
         let defaults = self.config.defaults.clone();
+        let failure_threshold = self.config.telegram.failure_threshold.max(1);
 
         for service in &self.config.services {
             let pool = self.pool.clone();
@@ -39,9 +54,19 @@ impl Worker {
             let token = self.cancel_token.clone();
             let service = service.clone();
             let defaults = defaults.clone();
+            let notifier = self.notifier.clone();
 
             handles.push(tokio::spawn(async move {
-                run_check_loop(pool, client, service, defaults, token).await;
+                run_check_loop(
+                    pool,
+                    client,
+                    service,
+                    defaults,
+                    notifier,
+                    failure_threshold,
+                    token,
+                )
+                .await;
             }));
         }
 
@@ -60,6 +85,8 @@ async fn run_check_loop(
     client: Client,
     service: ServiceConfig,
     defaults: DefaultsConfig,
+    notifier: Option<Arc<Notifier>>,
+    failure_threshold: u32,
     token: CancellationToken,
 ) {
     let interval = Duration::from_secs(service.effective_check_interval(&defaults));
@@ -71,12 +98,25 @@ async fn run_check_loop(
         "Starting check loop"
     );
 
-    perform_check(&pool, &client, &service, timeout).await;
+    // Per-service transition tracking, seeded from history so a restart doesn't
+    // re-alert an already-down service. Only kept when notifications are enabled.
+    let mut notify_state = match &notifier {
+        Some(_) => Some(NotifyState::seed(&pool, &service.id).await),
+        None => None,
+    };
+
+    let outcome = perform_check(&pool, &client, &service, timeout).await;
+    if let (Some(n), Some(st)) = (&notifier, notify_state.as_mut()) {
+        process_outcome(n, &service, failure_threshold, &outcome, st).await;
+    }
 
     loop {
         tokio::select! {
             _ = tokio::time::sleep(interval) => {
-                perform_check(&pool, &client, &service, timeout).await;
+                let outcome = perform_check(&pool, &client, &service, timeout).await;
+                if let (Some(n), Some(st)) = (&notifier, notify_state.as_mut()) {
+                    process_outcome(n, &service, failure_threshold, &outcome, st).await;
+                }
             }
             _ = token.cancelled() => {
                 info!(service_id = %service.id, "Check loop shutting down");
@@ -86,17 +126,90 @@ async fn run_check_loop(
     }
 }
 
+/// Outcome of a single check, surfaced to the notification state machine.
+struct CheckOutcome {
+    is_up: bool,
+    error_message: Option<String>,
+}
+
+/// Per-service notification state: how many checks have failed in a row, whether a
+/// DOWN alert has already been sent for the current outage, and when it began.
+struct NotifyState {
+    consecutive_failures: u32,
+    alerted_down: bool,
+    down_since: Option<Instant>,
+}
+
+impl NotifyState {
+    /// Seeds `alerted_down` from the last persisted result so a restart mid-outage
+    /// doesn't fire a duplicate DOWN alert (a later recovery still fires). When seeded
+    /// down, `down_since` stays unknown, so that recovery omits the duration line.
+    async fn seed(pool: &SqlitePool, service_id: &str) -> Self {
+        let alerted_down = match db::get_last_is_up(pool, service_id).await {
+            Ok(Some(is_up)) => !is_up,
+            Ok(None) => false,
+            Err(e) => {
+                warn!(service_id = %service_id, error = %e, "Failed to seed notification state");
+                false
+            }
+        };
+        Self {
+            consecutive_failures: 0,
+            alerted_down,
+            down_since: None,
+        }
+    }
+}
+
+/// Drives DOWN/recovery notifications from a check outcome. Alerts after
+/// `failure_threshold` consecutive failures; recovers on the first success.
+async fn process_outcome(
+    notifier: &Notifier,
+    service: &ServiceConfig,
+    failure_threshold: u32,
+    outcome: &CheckOutcome,
+    state: &mut NotifyState,
+) {
+    if outcome.is_up {
+        state.consecutive_failures = 0;
+        if state.alerted_down {
+            let down_for = state.down_since.map(|t| t.elapsed());
+            notifier.notify_recovery(service, down_for).await;
+            state.alerted_down = false;
+            state.down_since = None;
+            info!(service_id = %service.id, "Sent recovery notification");
+        }
+    } else {
+        // Mark the start of a fresh outage (not one we've already alerted/seeded).
+        if state.consecutive_failures == 0 && !state.alerted_down {
+            state.down_since = Some(Instant::now());
+        }
+        state.consecutive_failures += 1;
+        if !state.alerted_down && state.consecutive_failures >= failure_threshold {
+            notifier
+                .notify_down(service, outcome.error_message.as_deref())
+                .await;
+            state.alerted_down = true;
+            info!(
+                service_id = %service.id,
+                failures = state.consecutive_failures,
+                "Sent downtime notification"
+            );
+        }
+    }
+}
+
 async fn perform_check(
     pool: &SqlitePool,
     client: &Client,
     service: &ServiceConfig,
     timeout: Duration,
-) {
+) -> CheckOutcome {
     let start = Instant::now();
     let result = client.get(&service.url).timeout(timeout).send().await;
     let elapsed_ms = start.elapsed().as_millis() as i64;
 
-    match result {
+    let (is_up, status_code, error_message) = match result {
         Ok(response) => {
             let status = response.status().as_u16() as i32;
             let status_ok = response.status().as_u16() == service.expected_status;
@@ -135,18 +248,7 @@ async fn perform_check(
                 }
             };
 
-            if let Err(e) = db::insert_check_result(
-                pool,
-                &service.id,
-                is_up,
-                Some(status),
-                elapsed_ms,
-                error_message.as_deref(),
-            )
-            .await
-            {
-                error!(service_id = %service.id, error = %e, "Failed to insert check result");
-            }
+            (is_up, Some(status), error_message)
         }
         Err(err) => {
             let error_msg = if err.is_timeout() {
@@ -159,19 +261,26 @@ async fn perform_check(
 
             warn!(service_id = %service.id, error = %error_msg, "Health check failed");
 
-            if let Err(e) = db::insert_check_result(
-                pool,
-                &service.id,
-                false,
-                None,
-                elapsed_ms,
-                Some(&error_msg),
-            )
-            .await
-            {
-                error!(service_id = %service.id, error = %e, "Failed to insert check result");
-            }
+            (false, None, Some(error_msg))
         }
+    };
+
+    if let Err(e) = db::insert_check_result(
+        pool,
+        &service.id,
+        is_up,
+        status_code,
+        elapsed_ms,
+        error_message.as_deref(),
+    )
+    .await
+    {
+        error!(service_id = %service.id, error = %e, "Failed to insert check result");
+    }
+
+    CheckOutcome {
+        is_up,
+        error_message,
     }
 }
 

@@ -11,6 +11,8 @@ pub struct Config {
     #[serde(default)]
     pub database: DatabaseConfig,
     #[serde(default)]
+    pub telegram: TelegramConfig,
+    #[serde(default)]
     pub services: Vec<ServiceConfig>,
 }
 
@@ -34,6 +36,20 @@ pub struct DefaultsConfig {
 pub struct DatabaseConfig {
     #[serde(default = "default_db_url")]
     pub url: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TelegramConfig {
+    /// Bot token from @BotFather. Empty disables notifications.
+    #[serde(default)]
+    pub bot_token: String,
+    /// Chat/group IDs to notify. Strings accept numeric IDs ("-1001234567890")
+    /// and channel usernames ("@mychannel"). Empty disables notifications.
+    #[serde(default)]
+    pub chat_ids: Vec<String>,
+    /// Consecutive failed checks required before a DOWN alert is sent.
+    #[serde(default = "default_failure_threshold")]
+    pub failure_threshold: u32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -72,6 +88,10 @@ fn default_expected_status() -> u16 {
     200
 }
 
+fn default_failure_threshold() -> u32 {
+    3
+}
+
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
@@ -95,6 +115,23 @@ impl Default for DatabaseConfig {
         Self {
             url: default_db_url(),
         }
+    }
+}
+
+impl Default for TelegramConfig {
+    fn default() -> Self {
+        Self {
+            bot_token: String::new(),
+            chat_ids: Vec::new(),
+            failure_threshold: default_failure_threshold(),
+        }
+    }
+}
+
+impl TelegramConfig {
+    /// Notifications are active only when both a token and at least one chat are set.
+    pub fn is_enabled(&self) -> bool {
+        !self.bot_token.is_empty() && !self.chat_ids.is_empty()
     }
 }
 
@@ -152,6 +189,7 @@ impl Config {
                 server: ServerConfig::default(),
                 defaults: DefaultsConfig::default(),
                 database: DatabaseConfig::default(),
+                telegram: TelegramConfig::default(),
                 services: vec![],
             })
         }
@@ -170,6 +208,14 @@ impl Config {
                 return Err(ConfigError::InvalidRegex(svc.id.clone(), e.to_string()));
             }
         }
+
+        let tg = &self.telegram;
+        if tg.bot_token.is_empty() != tg.chat_ids.is_empty() {
+            tracing::warn!(
+                "Telegram is partially configured (need both bot_token and chat_ids); notifications disabled"
+            );
+        }
+
         Ok(())
     }
 }

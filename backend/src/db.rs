@@ -91,6 +91,22 @@ pub async fn get_latest_per_service(
     .await
 }
 
+/// Returns the `is_up` of the most recent check for a service, or `None` if it has
+/// no history yet. Used to seed notification state across restarts so an already-down
+/// service isn't re-alerted. Uses the `idx_check_results_lookup` index.
+pub async fn get_last_is_up(
+    pool: &SqlitePool,
+    service_id: &str,
+) -> Result<Option<bool>, sqlx::Error> {
+    let row = sqlx::query(
+        "SELECT is_up FROM check_results WHERE service_id = ? ORDER BY checked_at DESC LIMIT 1",
+    )
+    .bind(service_id)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(|r| r.get("is_up")))
+}
+
 pub async fn get_hourly_aggregation(
     pool: &SqlitePool,
     service_ids: &[String],
