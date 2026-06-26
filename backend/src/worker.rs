@@ -287,7 +287,7 @@ async fn perform_check(
 /// Returns the deepest error in the source chain, formatted as a string.
 /// reqwest's top-level `Display` only says "error sending request for url (...)";
 /// the actionable cause (e.g. "Connection refused (os error 61)") lives deeper.
-fn root_cause(err: &(dyn std::error::Error + 'static)) -> String {
+pub(crate) fn root_cause(err: &(dyn std::error::Error + 'static)) -> String {
     let mut current: &dyn std::error::Error = err;
     while let Some(source) = current.source() {
         current = source;

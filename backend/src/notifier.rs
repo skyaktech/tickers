@@ -57,7 +57,12 @@ impl Notifier {
                     let detail = resp.text().await.unwrap_or_default();
                     warn!(%chat_id, %status, detail = %detail, "Telegram API returned an error");
                 }
-                Err(e) => error!(%chat_id, error = %e, "Failed to send Telegram notification"),
+                // Log only the deepest source: reqwest's `Display` appends the request
+                // URL, which embeds the bot token. Never log `%e` here.
+                Err(e) => {
+                    let cause = crate::worker::root_cause(&e);
+                    error!(%chat_id, error = %cause, "Failed to send Telegram notification");
+                }
             }
         }
     }
