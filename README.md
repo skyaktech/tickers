@@ -12,6 +12,7 @@ A lightweight, self-hosted status page that monitors HTTP endpoints and displays
 - **Tick mark UI** — checkmarks (&#10003;) and crosses (&#10007;) colored by uptime percentage
 - **24-hour hourly** and **30-day daily** history rows per service
 - **Color-coded uptime**: green (100%) → yellow (≥95%) → orange (≥50%) → red (>0%) → purple (0%)
+- **Telegram alerts** on detected downtime and recovery — one bot per instance, configurable failure threshold
 - **Single binary** — Rust backend serves the WASM frontend as static files
 - **SQLite** storage with WAL mode — no external database required
 - **TOML configuration** with sensible defaults and per-service overrides
@@ -92,6 +93,11 @@ url = "sqlite://data/tickers.db" # SQLite database URL (default: "sqlite://data/
 check_interval = 60              # Default check interval in seconds (default: 60)
 timeout = 10                     # Default request timeout in seconds (default: 10)
 
+[telegram]                       # Optional — omit the whole section to disable notifications
+bot_token = "123456:ABC-DEF..."  # Bot token from @BotFather (required to enable)
+chat_ids = ["123456789"]         # Chats to notify: user/group IDs or "@channel" (required to enable)
+failure_threshold = 3            # Consecutive failed checks before a DOWN alert (default: 3)
+
 [[services]]
 id = "my-api"                    # Unique service identifier (required)
 name = "My API"                  # Display name (required)
@@ -116,6 +122,44 @@ Each `[[services]]` entry defines a monitored endpoint:
 | `expected_body`  | No       | —                 | Expected response body content (substring or `/regex/`) |
 | `check_interval` | No       | from `[defaults]` | Check interval in seconds          |
 | `timeout`        | No       | from `[defaults]` | Request timeout in seconds         |
+
+### Notifications (Telegram)
+
+Tickers can send a Telegram message when a service is detected down, and again when it recovers. One bot serves the whole instance, and every alert is delivered to all configured chats. Omit the `[telegram]` section to disable notifications entirely.
+
+**Setup:**
+
+1. Message [@BotFather](https://t.me/BotFather), send `/newbot`, and copy the **bot token** it gives you.
+2. Find your **chat ID**: send any message to your bot (or add it to a group), open `https://api.telegram.org/bot<token>/getUpdates`, and read `result[].message.chat.id`. Group IDs are negative (e.g. `-1001234567890`); channels can use `"@channelusername"` instead.
+3. Add a `[telegram]` section to your `tickers.toml`:
+
+   ```toml
+   [telegram]
+   bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+   chat_ids = ["123456789", "-1001234567890"]
+   failure_threshold = 3
+   ```
+
+| Field               | Required | Default | Description                                              |
+|---------------------|----------|---------|----------------------------------------------------------|
+| `bot_token`         | Yes      | —       | Bot token from @BotFather; empty disables notifications  |
+| `chat_ids`          | Yes      | —       | Chats to notify — user/group IDs or `"@channel"`         |
+| `failure_threshold` | No       | `3`     | Consecutive failed checks before a DOWN alert            |
+
+A **DOWN** alert fires after `failure_threshold` consecutive failed checks, so a single transient blip stays quiet. A **recovery** message fires on the first successful check afterward and includes how long the service was down. Notification state is restored from history on startup, so restarting Tickers won't re-alert an already-down service.
+
+Example messages:
+
+```
+🔴 My API is DOWN
+https://api.example.com/health
+Timeout after 10000ms
+2026-06-03 14:32 UTC
+
+✅ My API recovered
+was down for 4m 12s
+2026-06-03 14:36 UTC
+```
 
 ## Development
 

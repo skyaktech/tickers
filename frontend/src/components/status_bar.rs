@@ -33,7 +33,11 @@ fn format_timestamp(ts: &str, is_daily: bool) -> String {
             format!("{} UTC", dt.format("%b %d"))
         } else {
             let end = dt + TimeDelta::hours(1);
-            format!("{} \u{2013} {} UTC", dt.format("%b %d, %H:%M"), end.format("%H:%M"))
+            format!(
+                "{} \u{2013} {} UTC",
+                dt.format("%b %d, %H:%M"),
+                end.format("%H:%M")
+            )
         }
     } else if is_daily {
         if let Ok(nd) = NaiveDate::parse_from_str(ts, "%Y-%m-%d") {
