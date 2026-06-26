@@ -168,9 +168,6 @@ mod tests {
     #[test]
     fn recovery_message_omits_unknown_duration() {
         let msg = format_recovery(&sample_service(), None, "2026-06-03 14:36 UTC");
-        assert_eq!(
-            msg,
-            "✅ Example Service recovered\n2026-06-03 14:36 UTC"
-        );
+        assert_eq!(msg, "✅ Example Service recovered\n2026-06-03 14:36 UTC");
     }
 }
