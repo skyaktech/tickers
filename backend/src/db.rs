@@ -99,7 +99,7 @@ pub async fn get_last_is_up(
     service_id: &str,
 ) -> Result<Option<bool>, sqlx::Error> {
     let row = sqlx::query(
-        "SELECT is_up FROM check_results WHERE service_id = ? ORDER BY checked_at DESC LIMIT 1",
+        "SELECT is_up FROM check_results WHERE service_id = ? ORDER BY checked_at DESC, id DESC LIMIT 1",
     )
     .bind(service_id)
     .fetch_optional(pool)
