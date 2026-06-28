@@ -20,7 +20,7 @@ Use the `justfile` — it's the canonical entry point (`just` lists all recipes)
 | Build WASM frontend | `just build-frontend` (needs `trunk` + `wasm32-unknown-unknown`) |
 | Full release | `just build-release` (frontend bundle → release binary) |
 
-**Toolchain:** Rust 1.85+, edition 2024. Frontend needs `rustup target add wasm32-unknown-unknown` and `cargo install trunk`.
+**Toolchain:** Rust 1.94+, edition 2024. Frontend needs `rustup target add wasm32-unknown-unknown` and `cargo install trunk`.
 
 **Gotcha:** plain `cargo build`/`cargo run` does **not** produce the WASM bundle — it only builds the native backend, which then serves whatever is already in `static_dir` (`frontend/dist`). Run `trunk build` (or `just dev`) first or the UI won't load.
 

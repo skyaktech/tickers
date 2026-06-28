@@ -6,7 +6,7 @@ Thank you for considering contributing to Tickers! Here are some guidelines to h
 
 ### Prerequisites
 
-- Rust 1.85+ (edition 2024)
+- Rust 1.94+ (edition 2024)
 - `wasm32-unknown-unknown` target: `rustup target add wasm32-unknown-unknown`
 - [Trunk](https://trunkrs.dev/) for building the frontend: `cargo install trunk`
 - SQLite3 (usually pre-installed on most systems)

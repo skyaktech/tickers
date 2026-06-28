@@ -165,7 +165,7 @@ was down for 4m 12s
 
 ### Prerequisites
 
-- **Rust 1.85+** (edition 2024)
+- **Rust 1.94+** (edition 2024)
 - **wasm32-unknown-unknown** target: `rustup target add wasm32-unknown-unknown`
 - **Trunk**: `cargo install trunk`
 

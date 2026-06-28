@@ -14,6 +14,7 @@ RUN trunk build --release
 
 # Stage 2: Build backend (native binary)
 FROM rust:1 AS backend-builder
+RUN apt-get update && apt-get install -y cmake && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
