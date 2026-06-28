@@ -1,5 +1,5 @@
 # Stage 1: Build frontend (WASM)
-FROM rust:1 AS frontend-builder
+FROM rust:1-bookworm AS frontend-builder
 RUN rustup target add wasm32-unknown-unknown
 RUN cargo install trunk
 
@@ -13,7 +13,7 @@ WORKDIR /app/frontend
 RUN trunk build --release
 
 # Stage 2: Build backend (native binary)
-FROM rust:1 AS backend-builder
+FROM rust:1-bookworm AS backend-builder
 RUN apt-get update && apt-get install -y cmake && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
