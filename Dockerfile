@@ -1,5 +1,5 @@
 # Stage 1: Build frontend (WASM)
-FROM rust:1-bookworm AS frontend-builder
+FROM rust:1-trixie AS frontend-builder
 RUN rustup target add wasm32-unknown-unknown
 RUN cargo install trunk
 
